@@ -22,7 +22,7 @@ var statuses = []AccrualStatus{
 }
 
 func (s *Service) GetOrderAccrual(ctx context.Context, number string) (*OrderAccrual, error) {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	statuses := []AccrualStatus{
 		StatusRegistered,
@@ -34,7 +34,7 @@ func (s *Service) GetOrderAccrual(ctx context.Context, number string) (*OrderAcc
 
 	var accrual *int64
 	if status == StatusProcessed {
-		val := int64(rand.Intn(1000))
+		val := int64(r.Intn(1000))
 		accrual = &val
 	}
 

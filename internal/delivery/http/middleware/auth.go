@@ -21,13 +21,13 @@ func AuthMiddleware(jwtManager *authinfra.JWTManager) func(http.Handler) http.Ha
 				return
 			}
 			token := strings.TrimPrefix(authHeader, "Bearer ")
-			userId, err := jwtManager.Verify(token)
+			userID, err := jwtManager.Verify(token)
 			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserIDKey, userId)
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

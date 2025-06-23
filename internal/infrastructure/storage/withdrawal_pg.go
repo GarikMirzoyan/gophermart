@@ -84,6 +84,11 @@ func (r *WithdrawalPG) GetUserWithdrawals(ctx context.Context, userID int) ([]*w
 		}
 		result = append(result, &w)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
