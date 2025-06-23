@@ -19,6 +19,7 @@ import (
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/order"
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/withdrawal"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 
 	_ "github.com/lib/pq"
 )
@@ -47,6 +48,10 @@ func New() (*App, error) {
 	db, err := sql.Open("postgres", cfg.DatabaseURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)
+	}
+
+	if err := goose.Up(db, "migrations"); err != nil {
+		log.Fatalf("failed to apply migrations: %v", err)
 	}
 
 	// TODO: сделать секрет ключ из переменной окружения
