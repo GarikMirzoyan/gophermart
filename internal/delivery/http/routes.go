@@ -23,7 +23,7 @@ func NewRouter(
 	r.Post("/api/user/register", authHandler.Register)
 	r.Post("/api/user/login", authHandler.Login)
 
-	r.Get("/api/orders/{number}", loyaltyHandler.GetOrderAccrual)
+	// r.Get("/api/orders/{number}", loyaltyHandler.GetOrderAccrual)
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtManager))
