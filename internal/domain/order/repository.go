@@ -13,7 +13,7 @@ type Repository interface {
 	GetOrderOwner(ctx context.Context, number string) (int, error)
 
 	// Обновить статус и начисленные баллы по заказу
-	UpdateAccrual(ctx context.Context, orderNumber string, status string, accrual int64) error
+	UpdateAccrual(ctx context.Context, orderNumber string, status string, accrual float64) error
 
 	// Обновить только статус заказа
 	UpdateStatus(ctx context.Context, orderNumber string, status string) error

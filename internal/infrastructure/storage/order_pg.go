@@ -80,7 +80,7 @@ func (r *OrderPG) GetOrderOwner(ctx context.Context, number string) (int, error)
 	return userID, nil
 }
 
-func (r *OrderPG) UpdateAccrual(ctx context.Context, orderNumber string, status string, accrual int64) error {
+func (r *OrderPG) UpdateAccrual(ctx context.Context, orderNumber string, status string, accrual float64) error {
 	_, err := r.DB.ExecContext(ctx, `
 		UPDATE orders
 		SET status = $1, accrual = $2

@@ -18,6 +18,6 @@ func (s *Service) GetBalance(ctx context.Context, userID int) (*balance.Balance,
 	return s.repo.GetByUserID(ctx, userID)
 }
 
-func (s *Service) AddBalance(ctx context.Context, userID int, amount int64) error {
+func (s *Service) AddBalance(ctx context.Context, userID int, amount float64) error {
 	return s.repo.Add(ctx, userID, amount)
 }

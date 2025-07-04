@@ -35,7 +35,7 @@ func (r *BalancePG) GetByUserID(ctx context.Context, userID int) (*balance.Balan
 	}, nil
 }
 
-func (r *BalancePG) Add(ctx context.Context, userID int, amount int64) error {
+func (r *BalancePG) Add(ctx context.Context, userID int, amount float64) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO user_balances (user_id, current_balance, total_withdrawn)
 		VALUES ($1, $2, 0)

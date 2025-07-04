@@ -12,5 +12,5 @@ const (
 type OrderAccrual struct {
 	Order   string        `json:"order"`
 	Status  AccrualStatus `json:"status"`
-	Accrual *int64        `json:"accrual,omitempty"`
+	Accrual *float64      `json:"accrual,omitempty"`
 }
