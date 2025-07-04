@@ -95,13 +95,13 @@ func (a *App) Run() error {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				a.OrderService.ProcessPendingOrders(ctx)
-				cancel()
-			}
+		for t := range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+			log.Printf("[ACCRUAL WORKER] TICK at %s", t.Format(time.RFC3339))
+
+			a.OrderService.ProcessPendingOrders(ctx)
+			cancel()
 		}
 	}()
 
