@@ -73,33 +73,48 @@ func (s *Service) AddOrder(ctx context.Context, userID int, number string) error
 		return err
 	}
 
-	go func() {
-		accrual, err := s.loyaltyService.GetOrderAccrual(context.Background(), number)
-		if err != nil {
-			log.Printf("loyalty service error for order %s: %v", number, err)
-			return
-		}
-		if accrual == nil {
-			return
-		}
-
-		if accrual.Status == loyalty.StatusProcessed && accrual.Accrual != nil {
-			if err := s.repo.UpdateAccrual(context.Background(), number, string(accrual.Status), *accrual.Accrual); err != nil {
-				log.Printf("failed to update accrual for order %s: %v", number, err)
-			}
-			if err := s.balanceService.AddBalance(context.Background(), userID, *accrual.Accrual); err != nil {
-				log.Printf("failed to update balance for user %d: %v", userID, err)
-			}
-		} else {
-			if err := s.repo.UpdateStatus(context.Background(), number, string(accrual.Status)); err != nil {
-				log.Printf("failed to update status for order %s: %v", number, err)
-			}
-		}
-	}()
+	log.Printf("order %s accepted for processing", number)
 
 	return nil
 }
 
 func (s *Service) GetOrdersByUser(ctx context.Context, userID int) ([]*order.Order, error) {
 	return s.repo.GetOrdersByUser(ctx, userID)
+}
+
+func (s *Service) ProcessPendingOrders(ctx context.Context) {
+	orders, err := s.repo.GetOrdersForProcessing(ctx)
+	log.Printf("processing order")
+	if err != nil {
+		log.Printf("failed to fetch orders for processing: %v", err)
+		return
+	}
+
+	for _, o := range orders {
+		accrual, err := s.loyaltyService.GetOrderAccrual(ctx, o.Number)
+		if err != nil {
+			log.Printf("failed to get accrual for order %s: %v", o.Number, err)
+			continue
+		}
+		if accrual == nil {
+			continue // Нет данных — пропускаем
+		}
+
+		if accrual.Status == loyalty.StatusProcessed && accrual.Accrual != nil {
+			err = s.repo.UpdateAccrual(ctx, o.Number, string(accrual.Status), *accrual.Accrual)
+			if err != nil {
+				log.Printf("failed to update accrual for order %s: %v", o.Number, err)
+				continue
+			}
+			err = s.balanceService.AddBalance(ctx, o.UserID, *accrual.Accrual)
+			if err != nil {
+				log.Printf("failed to update balance for user %d: %v", o.UserID, err)
+			}
+		} else {
+			err = s.repo.UpdateStatus(ctx, o.Number, string(accrual.Status))
+			if err != nil {
+				log.Printf("failed to update status for order %s: %v", o.Number, err)
+			}
+		}
+	}
 }

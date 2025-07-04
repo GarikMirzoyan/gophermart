@@ -17,4 +17,6 @@ type Repository interface {
 
 	// Обновить только статус заказа
 	UpdateStatus(ctx context.Context, orderNumber string, status string) error
+
+	GetOrdersForProcessing(ctx context.Context) ([]*Order, error)
 }

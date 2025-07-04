@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -90,6 +91,20 @@ func New() (*App, error) {
 }
 
 func (a *App) Run() error {
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				a.OrderService.ProcessPendingOrders(ctx)
+				cancel()
+			}
+		}
+	}()
+
 	authHandler := handler.NewAuthHandler(a.AuthService, a.JWTManager)
 	orderHandler := handler.NewOrderHandler(a.OrderService)
 	balanceHandler := handler.NewBalanceHandler(a.BalanceService)

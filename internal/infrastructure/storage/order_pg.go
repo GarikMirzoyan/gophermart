@@ -97,3 +97,29 @@ func (r *OrderPG) UpdateStatus(ctx context.Context, orderNumber string, status s
 	`, status, orderNumber)
 	return err
 }
+
+func (r *OrderPG) GetOrdersForProcessing(ctx context.Context) ([]*order.Order, error) {
+	rows, err := r.DB.QueryContext(ctx, `
+		SELECT number, user_id
+		FROM orders
+		WHERE status IN ('NEW', 'PROCESSING')
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*order.Order
+	for rows.Next() {
+		var o order.Order
+		if err := rows.Scan(&o.Number, &o.UserID); err != nil {
+			return nil, err
+		}
+		orders = append(orders, &o)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
