@@ -45,26 +45,22 @@ func ValidateLuhn(number string) bool {
 }
 
 func (s *Service) AddOrder(ctx context.Context, userID int, number string) error {
-	// Проверяем, что номер состоит только из цифр
+	// Проверка номера
 	matched, _ := regexp.MatchString(`^\d+$`, number)
-	if !matched {
-		return ErrInvalidOrderNumber
-	}
-	if !ValidateLuhn(number) {
+	if !matched || !ValidateLuhn(number) {
 		return ErrInvalidOrderNumber
 	}
 
+	// Проверка владельца заказа
 	ownerID, err := s.repo.GetOrderOwner(ctx, number)
 	if err != nil {
 		return err
 	}
-
 	if ownerID != 0 {
 		if ownerID == userID {
 			return ErrOrderAlreadyExists
-		} else {
-			return ErrOrderBelongsToAnotherUser
 		}
+		return ErrOrderBelongsToAnotherUser
 	}
 
 	order := &order.Order{
@@ -73,38 +69,33 @@ func (s *Service) AddOrder(ctx context.Context, userID int, number string) error
 		UploadedAt: time.Now(),
 		UserID:     userID,
 	}
-
 	if err := s.repo.AddOrder(ctx, order); err != nil {
 		return err
 	}
 
-	// Обращение к сервису лояльности
-	accrual, err := s.loyaltyService.GetOrderAccrual(ctx, number)
-	if err != nil {
-		// Не мешаем основному флоу — просто логируем
-		log.Printf("loyalty service error for order %s: %v", number, err)
-		return nil
-	}
-
-	// Обновление статуса и (если есть) суммы начислений
-	if accrual.Status == loyalty.StatusProcessed && accrual.Accrual != nil {
-		err := s.repo.UpdateAccrual(ctx, number, string(accrual.Status), *accrual.Accrual)
-		log.Printf("failed to update accrual for order %s: %v", string(accrual.Status), *accrual.Accrual)
+	go func() {
+		accrual, err := s.loyaltyService.GetOrderAccrual(context.Background(), number)
 		if err != nil {
-			log.Printf("failed to update accrual for order %s: %v", number, err)
+			log.Printf("loyalty service error for order %s: %v", number, err)
+			return
+		}
+		if accrual == nil {
+			return
 		}
 
-		err = s.balanceService.AddBalance(ctx, userID, *accrual.Accrual)
-		if err != nil {
-			log.Printf("failed to update balance for user %d: %v", userID, err)
-			return err
+		if accrual.Status == loyalty.StatusProcessed && accrual.Accrual != nil {
+			if err := s.repo.UpdateAccrual(context.Background(), number, string(accrual.Status), *accrual.Accrual); err != nil {
+				log.Printf("failed to update accrual for order %s: %v", number, err)
+			}
+			if err := s.balanceService.AddBalance(context.Background(), userID, *accrual.Accrual); err != nil {
+				log.Printf("failed to update balance for user %d: %v", userID, err)
+			}
+		} else {
+			if err := s.repo.UpdateStatus(context.Background(), number, string(accrual.Status)); err != nil {
+				log.Printf("failed to update status for order %s: %v", number, err)
+			}
 		}
-	} else {
-		err := s.repo.UpdateStatus(ctx, number, string(accrual.Status))
-		if err != nil {
-			log.Printf("failed to update status for order %s: %v", number, err)
-		}
-	}
+	}()
 
 	return nil
 }

@@ -69,8 +69,9 @@ func New() (*App, error) {
 	withdrawalRepo := storage.NewWithdrawalPG(db)
 	withdrawalService := withdrawal.New(withdrawalRepo)
 
+	loyaltyClient := loyalty.NewClient(cfg.AccrualAddress)
 	// Для работы с баллами
-	loyaltyService := loyalty.New()
+	loyaltyService := loyalty.New(loyaltyClient)
 
 	// Для работы с заказами
 	orderRepo := storage.NewOrderPG(db)
