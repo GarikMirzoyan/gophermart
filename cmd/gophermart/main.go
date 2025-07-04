@@ -17,6 +17,5 @@ func main() {
 		log.Fatalf("error running app: %v", err)
 	}
 
-	// Например, appInstance.Run() для старта сервера
 	log.Printf("App initialized with config: %+v", appInstance.Config)
 }

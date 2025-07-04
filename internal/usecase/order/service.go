@@ -84,7 +84,6 @@ func (s *Service) GetOrdersByUser(ctx context.Context, userID int) ([]*order.Ord
 
 func (s *Service) ProcessPendingOrders(ctx context.Context) {
 	orders, err := s.repo.GetOrdersForProcessing(ctx)
-	log.Printf("processing order")
 	if err != nil {
 		log.Printf("failed to fetch orders for processing: %v", err)
 		return
