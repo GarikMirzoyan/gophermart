@@ -9,10 +9,10 @@ import (
 )
 
 type BalanceHandler struct {
-	BalanceService *balance.Service
+	BalanceService balance.IService
 }
 
-func NewBalanceHandler(balanceService *balance.Service) *BalanceHandler {
+func NewBalanceHandler(balanceService balance.IService) *BalanceHandler {
 	return &BalanceHandler{BalanceService: balanceService}
 }
 

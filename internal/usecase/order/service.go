@@ -19,10 +19,10 @@ var ErrOrderBelongsToAnotherUser = errors.New("order belongs to another user")
 type Service struct {
 	repo           order.Repository
 	loyaltyService *loyalty.Service
-	balanceService *balance.Service
+	balanceService balance.IService
 }
 
-func New(repo order.Repository, loyaltyService *loyalty.Service, balanceService *balance.Service) *Service {
+func New(repo order.Repository, loyaltyService *loyalty.Service, balanceService balance.IService) *Service {
 	return &Service{repo: repo, loyaltyService: loyaltyService, balanceService: balanceService}
 }
 

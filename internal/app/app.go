@@ -30,7 +30,7 @@ type App struct {
 	JWTManager        *auth.JWTManager
 	OrderService      *order.Service
 	AuthService       *authusecase.Service
-	BalanceService    *balance.Service
+	BalanceService    balance.IService
 	WithdrawalService *withdrawal.Service
 	LoyaltyService    *loyalty.Service
 	DB                *sql.DB

@@ -6,11 +6,16 @@ import (
 	"github.com/GarikMirzoyan/gophermart/internal/domain/balance"
 )
 
+type IService interface {
+	GetBalance(ctx context.Context, userID int) (*balance.Balance, error)
+	AddBalance(ctx context.Context, userID int, amount float64) error
+}
+
 type Service struct {
 	repo balance.Repository
 }
 
-func New(repo balance.Repository) *Service {
+func New(repo balance.Repository) IService {
 	return &Service{repo: repo}
 }
 
