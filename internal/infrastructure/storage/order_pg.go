@@ -43,7 +43,7 @@ func (r *OrderPG) GetOrdersByUser(ctx context.Context, userID int) ([]*order.Ord
 	var orders []*order.Order
 	for rows.Next() {
 		var o order.Order
-		var accrual sql.NullInt32
+		var accrual sql.NullFloat64
 		var status string
 
 		err := rows.Scan(&o.Number, &status, &accrual, &o.UploadedAt)
@@ -52,7 +52,7 @@ func (r *OrderPG) GetOrdersByUser(ctx context.Context, userID int) ([]*order.Ord
 		}
 		o.Status = order.Status(status)
 		if accrual.Valid {
-			v := int(accrual.Int32)
+			v := accrual.Float64
 			o.Accrual = &v
 		}
 		o.UserID = userID

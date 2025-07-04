@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -65,7 +66,7 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.OrderService.GetOrdersByUser(r.Context(), userID)
 	log.Printf("finished GetOrdersByUser for user %d", userID)
 	if err != nil {
-		http.Error(w, "server error", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("server error: %v", err), http.StatusInternalServerError)
 		return
 	}
 	if len(orders) == 0 {
