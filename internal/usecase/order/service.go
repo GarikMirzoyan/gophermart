@@ -90,14 +90,19 @@ func (s *Service) ProcessPendingOrders(ctx context.Context) {
 	}
 
 	for _, o := range orders {
+		log.Printf("[ACCRUAL WORKER] Processing order %s for user %d", o.Number, o.UserID)
+
 		accrual, err := s.loyaltyService.GetOrderAccrual(ctx, o.Number)
 		if err != nil {
-			log.Printf("failed to get accrual for order %s: %v", o.Number, err)
+			log.Printf("[ACCRUAL WORKER] failed to get accrual for order %s: %v", o.Number, err)
 			continue
 		}
 		if accrual == nil {
-			continue // Нет данных — пропускаем
+			log.Printf("[ACCRUAL WORKER] accrual for order %s is nil", o.Number)
+			continue
 		}
+
+		log.Printf("[ACCRUAL WORKER] Got accrual for order %s: status=%s, accrual=%v", o.Number, accrual.Status, accrual.Accrual)
 
 		if accrual.Status == loyalty.StatusProcessed && accrual.Accrual != nil {
 			err = s.repo.UpdateAccrual(ctx, o.Number, string(accrual.Status), *accrual.Accrual)

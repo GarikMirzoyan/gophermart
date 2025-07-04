@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -20,11 +21,12 @@ type httpClient struct {
 func NewClient(baseURL string) Client {
 	return &httpClient{
 		baseURL: baseURL,
-		client:  &http.Client{Timeout: 20 * time.Second},
+		client:  &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
 func (c *httpClient) GetAccrual(ctx context.Context, orderNumber string) (*OrderAccrual, error) {
+	log.Printf("[LOYALTY CLIENT] Requesting accrual for %s", orderNumber)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/orders/"+orderNumber, nil)
 	if err != nil {
 		return nil, err

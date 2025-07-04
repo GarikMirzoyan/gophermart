@@ -92,11 +92,11 @@ func New() (*App, error) {
 
 func (a *App) Run() error {
 	go func() {
-		ticker := time.NewTicker(20 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
 		for t := range ticker.C {
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 			log.Printf("[ACCRUAL WORKER] TICK at %s", t.Format(time.RFC3339))
 
