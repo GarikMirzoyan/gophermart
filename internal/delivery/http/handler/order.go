@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -60,7 +61,9 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("starting GetOrdersByUser for user %d", userID)
 	orders, err := h.OrderService.GetOrdersByUser(r.Context(), userID)
+	log.Printf("finished GetOrdersByUser for user %d", userID)
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
