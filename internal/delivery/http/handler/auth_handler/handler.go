@@ -1,4 +1,4 @@
-package handler
+package auth_handler
 
 import (
 	"encoding/json"
@@ -10,13 +10,13 @@ import (
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/auth"
 )
 
-type AuthHandler struct {
+type Handler struct {
 	AuthService *auth.Service
 	JWTManager  *infraauth.JWTManager
 }
 
-func NewAuthHandler(authService *auth.Service, jwtManager *infraauth.JWTManager) *AuthHandler {
-	return &AuthHandler{
+func New(authService *auth.Service, jwtManager *infraauth.JWTManager) *Handler {
+	return &Handler{
 		AuthService: authService,
 		JWTManager:  jwtManager,
 	}
@@ -27,7 +27,7 @@ type credentials struct {
 	Password string `json:"password"`
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var creds credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -49,7 +49,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var creds credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)

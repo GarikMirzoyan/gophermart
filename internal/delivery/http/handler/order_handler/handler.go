@@ -1,6 +1,7 @@
-package handler
+package order_handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,20 +10,27 @@ import (
 	"strings"
 
 	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/middleware"
-	"github.com/GarikMirzoyan/gophermart/internal/usecase/order"
+	"github.com/GarikMirzoyan/gophermart/internal/domain/order"
+	orderUseCase "github.com/GarikMirzoyan/gophermart/internal/usecase/order"
 )
 
-type OrderHandler struct {
-	OrderService *order.Service
+type Service interface {
+	AddOrder(ctx context.Context, userID int, number string) error
+	GetOrdersByUser(ctx context.Context, userID int) ([]*order.Order, error)
+	ProcessPendingOrders(ctx context.Context)
 }
 
-func NewOrderHandler(orderService *order.Service) *OrderHandler {
-	return &OrderHandler{
+type Handler struct {
+	OrderService Service
+}
+
+func New(orderService Service) *Handler {
+	return &Handler{
 		OrderService: orderService,
 	}
 }
 
-func (h *OrderHandler) AddOrder(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AddOrder(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -39,11 +47,11 @@ func (h *OrderHandler) AddOrder(w http.ResponseWriter, r *http.Request) {
 	err = h.OrderService.AddOrder(r.Context(), userID, number)
 	if err != nil {
 		switch {
-		case errors.Is(err, order.ErrInvalidOrderNumber):
+		case errors.Is(err, orderUseCase.ErrInvalidOrderNumber):
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		case errors.Is(err, order.ErrOrderAlreadyExists):
+		case errors.Is(err, orderUseCase.ErrOrderAlreadyExists):
 			w.WriteHeader(http.StatusOK)
-		case errors.Is(err, order.ErrOrderBelongsToAnotherUser):
+		case errors.Is(err, orderUseCase.ErrOrderBelongsToAnotherUser):
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
 			http.Error(w, "server error: "+err.Error(), http.StatusInternalServerError)
@@ -54,7 +62,7 @@ func (h *OrderHandler) AddOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)

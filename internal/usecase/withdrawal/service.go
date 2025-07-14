@@ -6,20 +6,21 @@ import (
 	"log"
 
 	"github.com/GarikMirzoyan/gophermart/internal/domain/withdrawal"
-	"github.com/GarikMirzoyan/gophermart/internal/usecase/order"
+	"github.com/GarikMirzoyan/gophermart/internal/validation"
 )
 
 type Service struct {
-	repo withdrawal.Repository
+	repo           withdrawal.Repository
+	validateNumber validation.OrderNumberValidator
 }
 
-func New(repo withdrawal.Repository) *Service {
-	return &Service{repo: repo}
+func New(repo withdrawal.Repository, validate validation.OrderNumberValidator) *Service {
+	return &Service{repo: repo, validateNumber: validate}
 }
 
 func (s *Service) Withdraw(ctx context.Context, userID int, orderNumber string, sum float64) error {
 	// Валидация номера заказа
-	if !order.ValidateLuhn(orderNumber) {
+	if !s.validateNumber(orderNumber) {
 		return withdrawal.ErrInvalidOrderNumber
 	}
 

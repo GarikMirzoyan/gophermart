@@ -6,144 +6,149 @@ import (
 
 	"github.com/GarikMirzoyan/gophermart/internal/domain/order"
 	"github.com/GarikMirzoyan/gophermart/internal/loyalty"
-	"github.com/GarikMirzoyan/gophermart/internal/usecase/balance"
 	orderUC "github.com/GarikMirzoyan/gophermart/internal/usecase/order"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
-	orderrepomocks "github.com/GarikMirzoyan/gophermart/internal/domain/order/mocks"
-	loyaltymocks "github.com/GarikMirzoyan/gophermart/internal/loyalty/mocks"
-	balancemocks "github.com/GarikMirzoyan/gophermart/internal/usecase/balance/mocks"
+	mock_balance "github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler/mocks"
+	mock_order_rep "github.com/GarikMirzoyan/gophermart/internal/domain/order/mocks"
+	mock_loyalty "github.com/GarikMirzoyan/gophermart/internal/loyalty/mocks"
+
+	"go.uber.org/mock/gomock"
 )
-
-// ===== MOCKS =====
-
-type MockRepo struct {
-	mock.Mock
-}
-
-func (m *MockRepo) GetOrderOwner(ctx context.Context, number string) (int, error) {
-	args := m.Called(ctx, number)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockRepo) AddOrder(ctx context.Context, o *order.Order) error {
-	args := m.Called(ctx, o)
-	return args.Error(0)
-}
-
-func (m *MockRepo) GetOrdersByUser(ctx context.Context, userID int) ([]*order.Order, error) {
-	return nil, nil
-}
-
-func (m *MockRepo) GetOrdersForProcessing(ctx context.Context) ([]*order.Order, error) {
-	return nil, nil
-}
-
-func (m *MockRepo) UpdateAccrual(ctx context.Context, number string, status string, accrual float64) error {
-	return nil
-}
-
-func (m *MockRepo) UpdateStatus(ctx context.Context, number string, status string) error {
-	return nil
-}
-
-// ===== TEST =====
 
 func TestAddOrder(t *testing.T) {
 	ctx := context.Background()
-	mockRepo := new(MockRepo)
-	loyaltySvc := &loyalty.Service{} // заглушка, не используется здесь
-	balanceSvc := &balance.Service{} // заглушка, не используется здесь
-	service := orderUC.New(mockRepo, loyaltySvc, balanceSvc)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_order_rep.NewMockRepository(ctrl)
+	service := orderUC.New(mockRepo, nil, nil, func(s string) bool {
+		return s == "79927398713"
+	})
 
 	t.Run("invalid number format", func(t *testing.T) {
 		err := service.AddOrder(ctx, 1, "abc123")
-		assert.ErrorIs(t, err, orderUC.ErrInvalidOrderNumber)
+		if err != orderUC.ErrInvalidOrderNumber {
+			t.Fatalf("expected ErrInvalidOrderNumber, got %v", err)
+		}
 	})
 
 	t.Run("invalid Luhn number", func(t *testing.T) {
 		err := service.AddOrder(ctx, 1, "1234567890")
-		assert.ErrorIs(t, err, orderUC.ErrInvalidOrderNumber)
+		if err != orderUC.ErrInvalidOrderNumber {
+			t.Fatalf("expected ErrInvalidOrderNumber, got %v", err)
+		}
 	})
 
 	t.Run("order already exists for same user", func(t *testing.T) {
-		mockRepo.On("GetOrderOwner", ctx, "79927398713").Return(1, nil).Once()
+		mockRepo.EXPECT().
+			GetOrderOwner(ctx, "79927398713").
+			Return(1, nil)
 
-		err := service.AddOrder(ctx, 1, "79927398713") // correct Luhn
-		assert.ErrorIs(t, err, orderUC.ErrOrderAlreadyExists)
-		mockRepo.AssertExpectations(t)
+		err := service.AddOrder(ctx, 1, "79927398713")
+		if err != orderUC.ErrOrderAlreadyExists {
+			t.Fatalf("expected ErrOrderAlreadyExists, got %v", err)
+		}
 	})
 
 	t.Run("order belongs to another user", func(t *testing.T) {
-		mockRepo.On("GetOrderOwner", ctx, "79927398713").Return(2, nil).Once()
+		mockRepo.EXPECT().
+			GetOrderOwner(ctx, "79927398713").
+			Return(2, nil)
 
 		err := service.AddOrder(ctx, 1, "79927398713")
-		assert.ErrorIs(t, err, orderUC.ErrOrderBelongsToAnotherUser)
-		mockRepo.AssertExpectations(t)
+		if err != orderUC.ErrOrderBelongsToAnotherUser {
+			t.Fatalf("expected ErrOrderBelongsToAnotherUser, got %v", err)
+		}
 	})
 
 	t.Run("successfully adds order", func(t *testing.T) {
 		orderNumber := "79927398713"
-		mockRepo.On("GetOrderOwner", ctx, orderNumber).Return(0, nil).Once()
-		mockRepo.On("AddOrder", ctx, mock.MatchedBy(func(o *order.Order) bool {
-			return o.Number == orderNumber && o.UserID == 1
-		})).Return(nil).Once()
+
+		mockRepo.EXPECT().
+			GetOrderOwner(ctx, orderNumber).
+			Return(0, nil)
+
+		mockRepo.EXPECT().
+			AddOrder(ctx, gomock.Any()).
+			DoAndReturn(func(_ context.Context, o *order.Order) error {
+				if o.Number != orderNumber || o.UserID != 1 {
+					t.Fatalf("unexpected order %+v", o)
+				}
+				return nil
+			})
 
 		err := service.AddOrder(ctx, 1, orderNumber)
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 	})
 }
 
 func TestGetOrdersByUser(t *testing.T) {
 	ctx := context.Background()
-	mockRepo := new(orderrepomocks.Repository)
-	service := orderUC.New(mockRepo, nil, nil)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	expected := []*order.Order{
-		{Number: "123", Status: "NEW", UserID: 1},
-	}
-	mockRepo.On("GetOrdersByUser", ctx, 1).Return(expected, nil)
+	mockRepo := mock_order_rep.NewMockRepository(ctrl)
+	service := orderUC.New(mockRepo, nil, nil, func(s string) bool {
+		return s == "12345678903"
+	})
+
+	expected := []*order.Order{{Number: "123", Status: "NEW", UserID: 1}}
+
+	mockRepo.EXPECT().
+		GetOrdersByUser(ctx, 1).
+		Return(expected, nil)
 
 	orders, err := service.GetOrdersByUser(ctx, 1)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, orders)
-	mockRepo.AssertExpectations(t)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(orders) != 1 || orders[0].Number != "123" {
+		t.Fatalf("unexpected orders: %+v", orders)
+	}
 }
 
 func TestProcessPendingOrders_ProcessedOrder(t *testing.T) {
 	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	mockRepo := new(orderrepomocks.Repository)
-	mockBalance := new(balancemocks.IService)
-	mockLoyaltyClient := new(loyaltymocks.Client)
+	mockRepo := mock_order_rep.NewMockRepository(ctrl)
+	mockBalance := mock_balance.NewMockService(ctrl)
+	mockLoyaltyClient := mock_loyalty.NewMockClient(ctrl)
 
 	loyaltySvc := loyalty.New(mockLoyaltyClient)
-	orderSvc := orderUC.New(mockRepo, loyaltySvc, mockBalance)
+	service := orderUC.New(mockRepo, loyaltySvc, mockBalance, func(s string) bool {
+		return s == "12345678903"
+	})
 
-	orders := []*order.Order{
-		{Number: "12345678903", UserID: 1, Status: order.StatusNew},
-	}
-
+	orderNumber := "12345678903"
 	accrualVal := 42.5
+	orders := []*order.Order{
+		{Number: orderNumber, UserID: 1, Status: order.StatusNew},
+	}
 	accrual := &loyalty.OrderAccrual{
-		Order:   "12345678903",
+		Order:   orderNumber,
 		Status:  loyalty.StatusProcessed,
 		Accrual: &accrualVal,
 	}
 
-	mockRepo.On("GetOrdersForProcessing", mock.Anything).Return(orders, nil)
-	mockLoyaltyClient.On("GetAccrual", mock.Anything, "12345678903").Return(accrual, nil)
-	mockRepo.On("UpdateAccrual", mock.Anything, "12345678903", string(loyalty.StatusProcessed), accrualVal).Return(nil)
-	mockBalance.On("AddBalance", mock.Anything, 1, accrualVal).Return(nil)
+	mockRepo.EXPECT().
+		GetOrdersForProcessing(ctx).
+		Return(orders, nil)
 
-	orderSvc.ProcessPendingOrders(ctx)
+	mockLoyaltyClient.EXPECT().
+		GetAccrual(ctx, orderNumber).
+		Return(accrual, nil)
 
-	mockRepo.AssertExpectations(t)
-	mockBalance.AssertExpectations(t)
-	mockLoyaltyClient.AssertExpectations(t)
+	mockRepo.EXPECT().
+		UpdateAccrual(ctx, orderNumber, string(loyalty.StatusProcessed), accrualVal).
+		Return(nil)
 
-	require.True(t, true)
+	mockBalance.EXPECT().
+		AddBalance(ctx, 1, accrualVal).
+		Return(nil)
+
+	service.ProcessPendingOrders(ctx)
 }

@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/GarikMirzoyan/gophermart/internal/domain/withdrawal"
@@ -24,39 +23,31 @@ func (r *WithdrawalPG) Withdraw(ctx context.Context, userID int, order string, s
 	}
 	defer tx.Rollback()
 
-	// Проверка баланса
-	var current float64
-	err = tx.QueryRowContext(ctx, `
-		SELECT current_balance FROM user_balances WHERE user_id = $1 FOR UPDATE
-	`, userID).Scan(&current)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			current = 0
-		} else {
-			return err
-		}
-	}
-
-	if current < sum {
-		return withdrawal.ErrInsufficientFunds
-	}
-
-	// Списание
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO withdrawals (user_id, order_number, sum, processed_at)
-		VALUES ($1, $2, $3, $4)
-	`, userID, order, sum, time.Now())
+	// Пытаемся сразу списать деньги, если хватает баланса
+	res, err := tx.ExecContext(ctx, `
+		UPDATE user_balances
+		SET 
+			current_balance = current_balance - $1,
+			total_withdrawn = total_withdrawn + $1
+		WHERE user_id = $2 AND current_balance >= $1
+	`, sum, userID)
 	if err != nil {
 		return err
 	}
 
-	// Обновление баланса
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return withdrawal.ErrInsufficientFunds
+	}
+
+	// Добавление записи о списании
 	_, err = tx.ExecContext(ctx, `
-		UPDATE user_balances
-		SET current_balance = current_balance - $1, total_withdrawn = total_withdrawn + $1
-		WHERE user_id = $2
-	`, sum, userID)
+		INSERT INTO withdrawals (user_id, order_number, sum, processed_at)
+		VALUES ($1, $2, $3, $4)
+	`, userID, order, sum, time.Now())
 	if err != nil {
 		return err
 	}

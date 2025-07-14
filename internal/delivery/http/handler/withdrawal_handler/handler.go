@@ -1,4 +1,4 @@
-package handler
+package withdrawal_handler
 
 import (
 	"encoding/json"
@@ -9,12 +9,12 @@ import (
 	withdrawalService "github.com/GarikMirzoyan/gophermart/internal/usecase/withdrawal"
 )
 
-type WithdrawalHandler struct {
+type Handler struct {
 	WithdrawService *withdrawalService.Service
 }
 
-func NewWithdrawalHandler(service *withdrawalService.Service) *WithdrawalHandler {
-	return &WithdrawalHandler{WithdrawService: service}
+func New(service *withdrawalService.Service) *Handler {
+	return &Handler{WithdrawService: service}
 }
 
 type withdrawRequest struct {
@@ -22,7 +22,7 @@ type withdrawRequest struct {
 	Sum   float64 `json:"sum"`
 }
 
-func (h *WithdrawalHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -48,7 +48,7 @@ func (h *WithdrawalHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *WithdrawalHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)

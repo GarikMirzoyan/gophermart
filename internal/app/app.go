@@ -10,7 +10,10 @@ import (
 
 	"github.com/GarikMirzoyan/gophermart/internal/config"
 	delivery "github.com/GarikMirzoyan/gophermart/internal/delivery/http"
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/auth_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/order_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/withdrawal_handler"
 	"github.com/GarikMirzoyan/gophermart/internal/infrastructure/auth"
 	"github.com/GarikMirzoyan/gophermart/internal/infrastructure/storage"
 	"github.com/GarikMirzoyan/gophermart/internal/loyalty"
@@ -19,8 +22,8 @@ import (
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/balance"
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/order"
 	"github.com/GarikMirzoyan/gophermart/internal/usecase/withdrawal"
+	"github.com/GarikMirzoyan/gophermart/internal/validation"
 	"github.com/joho/godotenv"
-	"github.com/pressly/goose/v3"
 
 	_ "github.com/lib/pq"
 )
@@ -28,9 +31,9 @@ import (
 type App struct {
 	Config            *config.Config
 	JWTManager        *auth.JWTManager
-	OrderService      *order.Service
+	OrderService      order_handler.Service
 	AuthService       *authusecase.Service
-	BalanceService    balance.IService
+	BalanceService    balance_handler.Service
 	WithdrawalService *withdrawal.Service
 	LoyaltyService    *loyalty.Service
 	DB                *sql.DB
@@ -51,10 +54,6 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)
 	}
 
-	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatalf("failed to apply migrations: %v", err)
-	}
-
 	// TODO: сделать секрет ключ из переменной окружения
 	jwtManager := auth.NewJWTManager("supersecretkey", time.Hour*24)
 
@@ -68,7 +67,7 @@ func New() (*App, error) {
 
 	// Для работы с выводами
 	withdrawalRepo := storage.NewWithdrawalPG(db)
-	withdrawalService := withdrawal.New(withdrawalRepo)
+	withdrawalService := withdrawal.New(withdrawalRepo, validation.Luhn)
 
 	loyaltyClient := loyalty.NewClient(cfg.AccrualAddress)
 	// Для работы с баллами
@@ -76,7 +75,7 @@ func New() (*App, error) {
 
 	// Для работы с заказами
 	orderRepo := storage.NewOrderPG(db)
-	orderService := order.New(orderRepo, loyaltyService, balanceService)
+	orderService := order.New(orderRepo, loyaltyService, balanceService, validation.Luhn)
 
 	return &App{
 		Config:            cfg,
@@ -105,10 +104,10 @@ func (a *App) Run() error {
 		}
 	}()
 
-	authHandler := handler.NewAuthHandler(a.AuthService, a.JWTManager)
-	orderHandler := handler.NewOrderHandler(a.OrderService)
-	balanceHandler := handler.NewBalanceHandler(a.BalanceService)
-	withdrawalHandler := handler.NewWithdrawalHandler(a.WithdrawalService)
+	authHandler := auth_handler.New(a.AuthService, a.JWTManager)
+	orderHandler := order_handler.New(a.OrderService)
+	balanceHandler := balance_handler.New(a.BalanceService)
+	withdrawalHandler := withdrawal_handler.New(a.WithdrawalService)
 	loyaltyHandler := LoyaltyHandler.NewLoyaltyHandler(a.LoyaltyService)
 	router := delivery.NewRouter(authHandler, orderHandler, balanceHandler, withdrawalHandler, loyaltyHandler, a.JWTManager)
 

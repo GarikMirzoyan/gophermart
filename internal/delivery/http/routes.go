@@ -3,7 +3,10 @@ package http
 import (
 	"net/http"
 
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/auth_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/order_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/withdrawal_handler"
 	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/middleware"
 	infraauth "github.com/GarikMirzoyan/gophermart/internal/infrastructure/auth"
 	LoyaltyHandler "github.com/GarikMirzoyan/gophermart/internal/loyalty/handler"
@@ -11,10 +14,10 @@ import (
 )
 
 func NewRouter(
-	authHandler *handler.AuthHandler,
-	orderHandler *handler.OrderHandler,
-	balanceHandler *handler.BalanceHandler,
-	withdrawalHandler *handler.WithdrawalHandler,
+	authHandler *auth_handler.Handler,
+	orderHandler *order_handler.Handler,
+	balanceHandler *balance_handler.Handler,
+	withdrawalHandler *withdrawal_handler.Handler,
 	loyaltyHandler *LoyaltyHandler.LoyaltyHandler,
 	jwtManager *infraauth.JWTManager,
 ) http.Handler {
