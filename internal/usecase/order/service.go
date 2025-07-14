@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balancehandler"
 	"github.com/GarikMirzoyan/gophermart/internal/domain/order"
 	"github.com/GarikMirzoyan/gophermart/internal/loyalty"
 	"github.com/GarikMirzoyan/gophermart/internal/validation"
@@ -20,11 +20,11 @@ var ErrOrderBelongsToAnotherUser = errors.New("order belongs to another user")
 type Service struct {
 	repo           order.Repository
 	loyaltyService *loyalty.Service
-	balanceService balance_handler.Service
+	balanceService balancehandler.Service
 	validateNumber validation.OrderNumberValidator
 }
 
-func New(repo order.Repository, loyaltyService *loyalty.Service, balanceService balance_handler.Service, validate validation.OrderNumberValidator) *Service {
+func New(repo order.Repository, loyaltyService *loyalty.Service, balanceService balancehandler.Service, validate validation.OrderNumberValidator) *Service {
 	return &Service{repo: repo, loyaltyService: loyaltyService, balanceService: balanceService, validateNumber: validate}
 }
 

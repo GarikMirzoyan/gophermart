@@ -10,10 +10,10 @@ import (
 
 	"github.com/GarikMirzoyan/gophermart/internal/config"
 	delivery "github.com/GarikMirzoyan/gophermart/internal/delivery/http"
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/auth_handler"
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler"
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/order_handler"
-	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/withdrawal_handler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/authhandler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balancehandler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/orderhandler"
+	"github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/withdrawalhandler"
 	"github.com/GarikMirzoyan/gophermart/internal/infrastructure/auth"
 	"github.com/GarikMirzoyan/gophermart/internal/infrastructure/storage"
 	"github.com/GarikMirzoyan/gophermart/internal/loyalty"
@@ -31,9 +31,9 @@ import (
 type App struct {
 	Config            *config.Config
 	JWTManager        *auth.JWTManager
-	OrderService      order_handler.Service
+	OrderService      orderhandler.Service
 	AuthService       *authusecase.Service
-	BalanceService    balance_handler.Service
+	BalanceService    balancehandler.Service
 	WithdrawalService *withdrawal.Service
 	LoyaltyService    *loyalty.Service
 	DB                *sql.DB
@@ -104,10 +104,10 @@ func (a *App) Run() error {
 		}
 	}()
 
-	authHandler := auth_handler.New(a.AuthService, a.JWTManager)
-	orderHandler := order_handler.New(a.OrderService)
-	balanceHandler := balance_handler.New(a.BalanceService)
-	withdrawalHandler := withdrawal_handler.New(a.WithdrawalService)
+	authHandler := authhandler.New(a.AuthService, a.JWTManager)
+	orderHandler := orderhandler.New(a.OrderService)
+	balanceHandler := balancehandler.New(a.BalanceService)
+	withdrawalHandler := withdrawalhandler.New(a.WithdrawalService)
 	loyaltyHandler := LoyaltyHandler.NewLoyaltyHandler(a.LoyaltyService)
 	router := delivery.NewRouter(authHandler, orderHandler, balanceHandler, withdrawalHandler, loyaltyHandler, a.JWTManager)
 

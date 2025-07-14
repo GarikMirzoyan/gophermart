@@ -8,7 +8,7 @@ import (
 	"github.com/GarikMirzoyan/gophermart/internal/loyalty"
 	orderUC "github.com/GarikMirzoyan/gophermart/internal/usecase/order"
 
-	mock_balance "github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balance_handler/mocks"
+	mock_balance "github.com/GarikMirzoyan/gophermart/internal/delivery/http/handler/balancehandler/mocks"
 	mock_order_rep "github.com/GarikMirzoyan/gophermart/internal/domain/order/mocks"
 	mock_loyalty "github.com/GarikMirzoyan/gophermart/internal/loyalty/mocks"
 

@@ -1,4 +1,4 @@
-package withdrawal_handler
+package withdrawalhandler
 
 import (
 	"encoding/json"
